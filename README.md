@@ -106,7 +106,7 @@ The Webots `controller` Python module is provided by Webots. It is not installed
 Open one of the world files in Webots, for example:
 
 ```text
-AutonomousRobots_Submission/Maze1/worlds/Maze1.wbt
+autonomous-robots/src/worlds/Maze1.wbt
 ```
 
 Repeat the same process for `Maze2.wbt`, `Maze3.wbt`, `Maze4.wbt`, and `Maze5.wbt`.
@@ -116,7 +116,7 @@ Repeat the same process for `Maze2.wbt`, `Maze3.wbt`, `Maze4.wbt`, and `Maze5.wb
 For each world, make sure the robot uses the controller folder inside the same maze project:
 
 ```text
-MazeX/controllers/main/
+src/controllers/main/
 ```
 
 In Webots, select the robot node and check the `controller` field. Set it to the controller folder name used in your project, for example:
@@ -147,11 +147,11 @@ Demo video can be seen [here](https://www.youtube.com/playlist?list=PLPnj5xhKrn-
 
 | Maze | Start simulation → Blue pillar reached | Blue pillar reached → Yellow pillar reached | Total time |
 | ---- | -------------------------------------- | ------------------------------------------- | ---------- |
-| Maze 1 | 03:26 | 01:11 | 04:37 |
-| Maze 2 | 01:49 | 02:02 | 03:52 | 
-| Maze 3 | 01:40 | 01:46 | 03:26 | 
-| Maze 4 | 01:40 | 00:50 | 02:30 | 
-| Maze 5 | 02:25 | 00:50 | 03:15 | 
+| Maze 1 | 01:43 | 00:49 | 02:32 |
+| Maze 2 | 01:22 | 00:58 | 02:20 | 
+| Maze 3 | 01:10 | 00:37 | 01:47 | 
+| Maze 4 | 01:08 | 01:03 | 02:11 | 
+| Maze 5 | 00:48 | 00:29 | 01:17 | 
 
 ## Main files
 
