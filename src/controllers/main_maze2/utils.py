@@ -9,6 +9,8 @@ def get_angle_diff(a, b):
     while diff < -np.pi:
         diff += 2*np.pi
     return diff
+# REFERENCE: 
+# Source: Gemini 3.1 Pro with detailed prompting and adapted to the teams use case.
 
 def remove_noisy_pixels(grid_map, obstacle_value=1, connectivity=8):
     """
@@ -24,6 +26,8 @@ def remove_noisy_pixels(grid_map, obstacle_value=1, connectivity=8):
             cleaned[labels == label] = 255
     cleaned_map = np.where(cleaned == 255, obstacle_value, 0)
     return cleaned_map
+# REFERENCE: 
+# Source: Gemini 3.1 Pro with detailed prompting and adapted to the teams use case.
 
 def clean_small_obstacle_components(grid_map, obstacle_value=1, min_size=5, connectivity=8):
     """
@@ -44,6 +48,8 @@ def clean_small_obstacle_components(grid_map, obstacle_value=1, min_size=5, conn
     drop_mask = (keep_mask == 0) & (grid_map == obstacle_value)
     cleaned_map[drop_mask] = 0
     return cleaned_map
+# REFERENCE: 
+# Source: Gemini 3.1 Pro with detailed prompting and adapted to the teams use case.
 
 def inflate_obstacles(grid_map, inflation_pixels=10):
     kernel_size = int(2 * inflation_pixels + 1)
@@ -52,6 +58,8 @@ def inflate_obstacles(grid_map, inflation_pixels=10):
     inflated = cv2.dilate(grid_uint8, kernel, iterations=1)
     inflated_map = (inflated > 0).astype(np.uint8)
     return inflated_map
+# REFERENCE: 
+# Source: Gemini 3.1 Pro with detailed prompting and adapted to the teams use case.
 
 def expand_free_pixel(map_array, map_point, inflation_pixels=1):
     # Purpose: 
@@ -70,6 +78,8 @@ def expand_free_pixel(map_array, map_point, inflation_pixels=1):
                 nx, ny = x + dx, y + dy
                 if 0 <= nx < w and 0 <= ny < h:
                     map_array[ny, nx] = 0  # FREESPACE_VALUE
+# REFERENCE: 
+# Source: Gemini 3.1 Pro with detailed prompting and adapted to the teams use case.
 
 def bresenham_line(start, end):
     x1, y1 = start
@@ -92,11 +102,14 @@ def bresenham_line(start, end):
             err += dx
             y1 += sy
     return points
+# REFERENCE: Original code authored by the project team. No external sources or LLMs were used. Values are calibrated for best performance.
 
 def boundary_laplacian(grid_map):
     img = (grid_map * 255).astype(np.uint8)
     lap = cv2.Laplacian(img, cv2.CV_8U, ksize=3)
     return (lap > 0).astype(np.uint8)
+# REFERENCE: 
+# Source: Gemini 3.1 Pro with detailed prompting and adapted to the teams use case.
 
 def boundary_density(boundary_mask, r=3):
     """
@@ -106,12 +119,16 @@ def boundary_density(boundary_mask, r=3):
 
     density = cv2.filter2D(boundary_mask.astype(np.uint8), -1, kernel)
     return density
+# REFERENCE: 
+# Source: Gemini 3.1 Pro with detailed prompting and adapted to the teams use case.
 
 def top_frontier_positions(density, top_k = 3):
     flat_indices = np.argpartition(density.ravel(), -top_k)[-top_k:]
     coords_2d = np.array(np.unravel_index(flat_indices, density.shape)).T # [(row, col), (y, x), ...]
     coords_2d = coords_2d[:, ::-1]
     return coords_2d
+# REFERENCE: 
+# Source: Gemini 3.1 Pro with detailed prompting and adapted to the teams use case.
 
 def select_nearest_high_density(density, map_position, top_k=3):
     flat_indices = np.argpartition(density.ravel(), -top_k)[-top_k:]
@@ -122,6 +139,8 @@ def select_nearest_high_density(density, map_position, top_k=3):
     
     nearest_idx = np.argmin(distances)
     return tuple(coords[nearest_idx])
+# REFERENCE: 
+# Source: Gemini 3.1 Pro with detailed prompting and adapted to the teams use case.
 
 def segment_color(hsv_img, color):
     """Segments an image based on the specified color in HSV space."""
@@ -156,6 +175,8 @@ def segment_color(hsv_img, color):
         return green_mask
 
     return None
+# REFERENCE: 
+# Source: Gemini 3.1 Pro with detailed prompting and adapted to the teams use case.
 
 def red_is_middle(hsv_img):
     "check if hsv_img has a red square in the middle"
@@ -180,11 +201,15 @@ def red_is_middle(hsv_img):
 
     # If red is present but not on the margins, it's in the middle.
     return True, red_mask
+# REFERENCE: 
+# Source: Gemini 3.1 Pro with detailed prompting and adapted to the teams use case.
 
 def percentage_map_differences(map1, map2):
     # Count number of different pixels
     diff_count = np.sum(map1 != map2)
     return diff_count / (map1.shape[0] * map1.shape[1])
+# REFERENCE: 
+# Source: Gemini 3.1 Pro with detailed prompting and adapted to the teams use case.
 
 def save_map(map, save_path):
     bw = (map * 255).astype(np.uint8)
