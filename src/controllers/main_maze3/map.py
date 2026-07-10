@@ -51,6 +51,8 @@ class GridMap():
             CLOSED: (128, 0, 128),  # closed area: purple
             FLOATING_WALL: (255, 128, 0),  # floating wall (depth-only): orange
         }
+# REFERENCE: 
+# Source: Gemini 3.1 Pro with detailed prompting. 
 
     def there_is_obstacle(self, map_target):
         """Check if a map target contains an obstacle."""
@@ -62,6 +64,7 @@ class GridMap():
             return True
 
         return False
+# REFERENCE: Original code authored by the project team. No external sources or LLMs were used. Values are calibrated for best performance.
 
     def update_log_odds(self, robot_pos, lidar_map_points):
         """Update log-odds map using Bresenham for each LIDAR point in map coordinates.
@@ -121,6 +124,7 @@ class GridMap():
         self.grid_map[green_protect_mask] = GREEN_CARPET
         self.grid_map[closed_mask] = CLOSED
         self.grid_map[floating_protect_mask] = FLOATING_WALL
+# REFERENCE: Original code authored by the project team. No external sources or LLMs were used. Values are calibrated for best performance.
 
 
 
@@ -128,12 +132,16 @@ class GridMap():
         map_points = self.convert_to_map_coordinate_matrix(lidar_points)
         self.update_log_odds(robot_pos, map_points)
         self.update_grid_map()
+# REFERENCE: 
+# Source: Gemini 3.1 Pro with detailed prompting. 
 
     def update_map_point(self, map_point, value):
         """Update a single point in grid_map with the specified value."""
         x, y = map_point
         if 0 <= x < self.map_size and 0 <= y < self.map_size:
             self.grid_map[y, x] = value
+# REFERENCE: 
+# Source: Gemini 3.1 Pro with detailed prompting. 
 
     def mark_depth_obstacles(self, ground_cells, floating_cells):
         """Stamp depth-camera obstacles that the horizontal lidar cannot see.
@@ -167,6 +175,8 @@ class GridMap():
             xs, ys = xs[not_pillar], ys[not_pillar]
             self.log_odds[ys, xs] = 4.0   # lock as occupied (>= 3.5 => never cleared)
             self.grid_map[ys, xs] = value
+# REFERENCE: 
+# Source: Gemini 3.1 Pro with detailed prompting. 
 
 
     def mark_blocked_ahead(self, forward_m=0.15, radius_m=0.05, value=CLOSED):
@@ -210,6 +220,7 @@ class GridMap():
         if marked:
             print(f"[map] stuck -> blocked {marked} cells ahead at ({cx},{cy})")
         return marked > 0
+# REFERENCE: Original code authored by the project team. No external sources or LLMs were used. Values are calibrated for best performance.
 
 
     def mark_closure_rect_simple(self, forward_m=0.7, back_m=-0.2, width_m=0.6, value=CLOSED):
@@ -277,6 +288,8 @@ class GridMap():
         except Exception as e:
             print(f'[warning] mark_closure_rect_simple failed: {e}')
             return False
+# REFERENCE: 
+# Source: Gemini 3.1 Pro with detailed prompting. 
 
     def detect_frontiers(self):
         """Detects frontier cells (free space next to unknown space) and groups them into regions using BFS clustering."""
@@ -301,6 +314,8 @@ class GridMap():
         frontier_regions = self._cluster_frontiers_bfs(frontier_cells)
         self.frontier_regions = frontier_regions
         return frontier_regions
+# REFERENCE: 
+# Source: Gemini 3.1 Pro with detailed prompting. 
         
     def _cluster_frontiers_bfs(self, frontier_cells, min_cluster_size=15):
         """Groups frontier cells into regions using Breadth-First Search (BFS) 
@@ -346,6 +361,8 @@ class GridMap():
                     clusters.append(cluster)
 
         return clusters
+# REFERENCE: 
+# Source: Gemini 3.1 Pro with detailed prompting. 
 
 
 
@@ -445,6 +462,8 @@ class GridMap():
 
         # print(f"[info] find_path: no path found between points after inflation attempts; returning None")
         # return None
+# REFERENCE: 
+# Source: Gemini 3.1 Pro with detailed prompting and manually adapted for the teams use case. 
 
 
     def find_path_for_frontier(self, start_point, end_point):
@@ -479,6 +498,8 @@ class GridMap():
         cv2.imwrite("debug_frontier_map.png", global_map*255)
         path = runAStarSearchSpline(global_map, start_point, end_point)
         return path
+# REFERENCE: 
+# Source: Gemini 3.1 Pro with detailed prompting. 
 
 
     def convert_to_map_coordinate_matrix(self, points_world):
@@ -500,6 +521,8 @@ class GridMap():
         points_map = points_scaled + t_map
 
         return points_map.astype(np.int32)
+# REFERENCE: 
+# Source: Gemini 3.1 Pro with detailed prompting. 
 
     # ========== VISUALIZATION METHODS ==========
     
@@ -512,6 +535,8 @@ class GridMap():
         self.clock = pygame.time.Clock()
         # A small, readable font for overlay text
         self.font = pygame.font.SysFont("Arial", 16)
+# REFERENCE: 
+# Source: Gemini 3.1 Pro with detailed prompting. 
     
     def _grid_to_display(self, grid_map):
         """Convert grid map to RGB display image using color_map.
@@ -537,12 +562,16 @@ class GridMap():
         display[~mapped_mask] = (0, 0, 0)
         
         return display
+# REFERENCE: 
+# Source: Gemini 3.1 Pro with detailed prompting. 
     
     def _map_to_screen(self, map_x, map_y):
         """Convert map coordinates to screen coordinates."""
         screen_x = int(map_x * self.window_size[0] / self.map_size)
         screen_y = int(map_y * self.window_size[1] / self.map_size)
         return screen_x, screen_y
+# REFERENCE: 
+# Source: Gemini 3.1 Pro with detailed prompting. 
     
     def _draw_path(self, path, color=(255, 0, 0), thickness=2):
         """Draw a path on screen.
@@ -557,6 +586,8 @@ class GridMap():
         scaled_path = [self._map_to_screen(x, y) for x, y in path]
         for i in range(len(scaled_path) - 1):
             pygame.draw.line(self.pygame_screen, color, scaled_path[i], scaled_path[i + 1], thickness)
+# REFERENCE: 
+# Source: Gemini 3.1 Pro with detailed prompting. 
     
     def _draw_point(self, map_x, map_y, color=(0, 255, 0), radius=5):
         """Draw a single point on screen.
@@ -570,6 +601,8 @@ class GridMap():
             return
         screen_x, screen_y = self._map_to_screen(map_x, map_y)
         pygame.draw.circle(self.pygame_screen, color, (screen_x, screen_y), radius)
+# REFERENCE: 
+# Source: Gemini 3.1 Pro with detailed prompting.     
     
     def _draw_frontier_regions(self, display_map):
         """Draw frontier regions colored by size on the display map.
@@ -602,6 +635,8 @@ class GridMap():
             for x, y in region:
                 if 0 <= x < self.map_size and 0 <= y < self.map_size:
                     display_map[y, x] = color_value
+# REFERENCE: 
+# Source: Gemini 3.1 Pro with detailed prompting. 
     
     def _draw_columns(self):
         """Draw detected column points."""
@@ -615,6 +650,8 @@ class GridMap():
             elif isinstance(col_data, (list, tuple)) and len(col_data) >= 2:
                 x, y = col_data[0], col_data[1]
                 self._draw_point(x, y, color=(0, 255, 255), radius=5)
+# REFERENCE: 
+# Source: Gemini 3.1 Pro with detailed prompting. 
     
     def run_visualization_loop(self):
         """Main visualization loop that continuously displays map state.
@@ -708,6 +745,8 @@ class GridMap():
         
         # Cleanup
         pygame.quit()
+# REFERENCE: 
+# Source: Gemini 3.1 Pro with detailed prompting. 
     
     def start_visualization(self):
         """Start the visualization loop in a separate daemon thread."""
@@ -716,6 +755,8 @@ class GridMap():
             self.visualization_thread = threading.Thread(target=self.run_visualization_loop, daemon=True)
             self.visualization_thread.start()
             print("[info] Visualization thread started")
+# REFERENCE: 
+# Source: Gemini 3.1 Pro with detailed prompting. 
     
     def stop_visualization(self):
         """Stop the visualization loop gracefully."""
@@ -723,4 +764,6 @@ class GridMap():
         if self.visualization_thread and self.visualization_thread.is_alive():
             self.visualization_thread.join(timeout=2.0)
             print("[info] Visualization thread stopped")
+# REFERENCE: 
+# Source: Gemini 3.1 Pro with detailed prompting. 
   

@@ -65,6 +65,8 @@ class Mission:
         self.robot.stop_motor()
         print(f"[mission] DONE (blue_reached={ok_blue}, yellow_reached={ok_yellow})")
         return ok_blue and ok_yellow
+# REFERENCE: 
+# Source: Gemini 3.1 Pro with detailed prompting. 
 
     # ------------------------------------------------------------------ #
     # Phase 1 — initial in-place scan                                     #
@@ -88,6 +90,7 @@ class Mission:
             self._scan_for_pillars()
             if self._both_pillars_known():
                 return
+# REFERENCE: Original code authored by the project team. No external sources or LLMs were used. Values are calibrated for best performance.
 
     def _settle_and_map(self):
         """Let the robot come to rest, then fold the lidar into the map twice.
@@ -100,6 +103,7 @@ class Mission:
                 return
         self._safe_map_update()
         self._safe_map_update()
+# REFERENCE: Original code authored by the project team. No external sources or LLMs were used. Values are calibrated for best performance.
 
     # ------------------------------------------------------------------ #
     # Phase 2 — frontier exploration                                      #
@@ -128,6 +132,7 @@ class Mission:
                 reach_px=max(NAV_GOAL_REACH_PX, 8),
                 tick_cb=self._explore_tick,
             )
+# REFERENCE: Original code authored by the project team. No external sources or LLMs were used. Values are calibrated for best performance.
 
     def _choose_frontier(self):
         """Pick the nearest reachable frontier-cluster centroid as a map goal."""
@@ -150,6 +155,8 @@ class Mission:
             if path and len(path) > 1:
                 return c
         return centroids[0][1] if centroids else None
+# REFERENCE: 
+# Source: Gemini 3.1 Pro with detailed prompting and adapted to the teams use case. 
 
     # ------------------------------------------------------------------ #
     # Phase 3 — traverse to a pillar                                      #
@@ -184,6 +191,8 @@ class Mission:
         print(f"[traverse] {color} pillar reached={reached} "
               f"(map_dist={self.robot.get_map_distance(goal_map):.1f}px)")
         return reached
+# REFERENCE: 
+# Source: Gemini 3.1 Pro with detailed prompting and adapted to the teams use case.
 
     def _center_and_confirm(self, color):
         """Rotate briefly to centre the pillar in view (best-effort)."""
@@ -197,6 +206,8 @@ class Mission:
             else:
                 robot.turn_left_milisecond(60)
         robot.stop_motor()
+# REFERENCE: 
+# Source: Gemini 3.1 Pro with detailed prompting. 
 
     # ------------------------------------------------------------------ #
     # Per-tick callbacks                                                  #
@@ -215,6 +226,8 @@ class Mission:
         """
         self._scan_for_pillars()          # keep refining both estimates
         return None
+# REFERENCE: 
+# Source: Gemini 3.1 Pro with detailed prompting. 
 
     # ------------------------------------------------------------------ #
     # Pillar bookkeeping                                                  #
@@ -229,6 +242,7 @@ class Mission:
             world, n = self.perception.localize_column(color, hsv=hsv, depth=depth)
             if world is not None:
                 self._store_pillar(color, world, n)
+# REFERENCE: Original code authored by the project team. No external sources or LLMs were used. Values are calibrated for best performance.
 
     def _store_pillar(self, color, world, n_pixels):
         """Record or refine a pillar's world/map position and stamp the map."""
@@ -248,10 +262,12 @@ class Mission:
             robot.map_object.update_map_point(cell, YELLOW_COLUMN)
         print(f"[pillar] {color} localised at world={np.round(world, 2)} "
               f"cell={cell} px={n_pixels}")
+# REFERENCE: Original code authored by the project team. No external sources or LLMs were used. Values are calibrated for best performance.
 
     def _both_pillars_known(self):
         """True once both pillar world positions have been stored."""
         return self.robot.blue_world is not None and self.robot.yellow_world is not None
+# REFERENCE: Original code authored by the project team. No external sources or LLMs were used. Values are calibrated for best performance.
 
     # ------------------------------------------------------------------ #
     # Planner adapters & small utilities                                  #
@@ -259,10 +275,12 @@ class Mission:
     def _goal_planner(self, start, goal):
         """Adapter: escalating-inflation A* for point-to-point goals."""
         return self.robot.map_object.find_path(start, goal)
+# REFERENCE: Original code authored by the project team. No external sources or LLMs were used. Values are calibrated for best performance.
 
     def _frontier_planner(self, start, goal):
         """Adapter: clearance A* tuned for frontier targets."""
         return self.robot.map_object.find_path_for_frontier(start, goal)
+# REFERENCE: Original code authored by the project team. No external sources or LLMs were used. Values are calibrated for best performance.
 
     def _safe_map_update(self):
         """Fold lidar into the grid and stamp visible green, guarding failures."""
@@ -279,3 +297,5 @@ class Mission:
             robot.map_object.mark_depth_obstacles(ground, floating)
         except Exception as exc:
             print(f"[mission] map update failed: {exc}")
+# REFERENCE: 
+# Source: Gemini 3.1 Pro with detailed prompting and adapted to the teams use case.

@@ -112,6 +112,7 @@ class Navigator:
             return 'reached'
         print("failed 2")
         return 'failed'
+# REFERENCE: Original code authored by the project team. Rxternal sources or LLMs were used later to adapt the code for the teams usecase.
 
     # ------------------------------------------------------------------ #
     # Internal following loop                                             #
@@ -185,6 +186,7 @@ class Navigator:
         if robot.get_map_distance(goal_map) < reach_px:
             return 'reached', steps
         return 'replan', steps
+# REFERENCE: Original code authored by the project team. Rxternal sources or LLMs were used later to adapt the code for the teams usecase.
 
     # ------------------------------------------------------------------ #
     # Safety, mapping and recovery helpers                                #
@@ -222,6 +224,7 @@ class Navigator:
             self._optional_reverse()
             return True
         return False
+# REFERENCE: Original code authored by the project team. No external sources or LLMs were used. Values are calibrated for best performance.
 
     def _stamp_green(self):
         """Project currently-visible green ground and mark it lethal on the map."""
@@ -231,6 +234,7 @@ class Navigator:
                 self.robot.mark_green_cells(pts)
         except Exception as exc:  # projection must never crash navigation
             print(f"[nav] green stamp failed: {exc}")
+# REFERENCE: Original code authored by the project team. No external sources or LLMs were used. Values are calibrated for best performance.
 
     def _stamp_depth(self):
         """Stamp depth-camera obstacles (flat-on-floor & floating walls) the
@@ -240,6 +244,7 @@ class Navigator:
             self.robot.map_object.mark_depth_obstacles(ground, floating)
         except Exception as exc:  # projection must never crash navigation
             print(f"[nav] depth stamp failed: {exc}")
+# REFERENCE: Original code authored by the project team. No external sources or LLMs were used. Values are calibrated for best performance.
 
     def _periodic_map_update(self, step_i):
         """Fold the latest lidar scan into the grid on a fixed cadence."""
@@ -253,6 +258,8 @@ class Navigator:
             self._stamp_depth()
         except Exception as exc:
             print(f"[nav] map update failed: {exc}")
+# REFERENCE: 
+# Source: Gemini 3.1 Pro with detailed prompting and adapted to the teams use case.
 
     def _optional_reverse(self):
         """Tiny backward nudge, ONLY if RECOVERY_ALLOW_REVERSE is enabled.
@@ -262,6 +269,7 @@ class Navigator:
         """
         if RECOVERY_ALLOW_REVERSE:
             self.robot.move_backward_milisecond(EMERGENCY_BACKUP_MS)
+# REFERENCE: Original code authored by the project team. No external sources or LLMs were used. Values are calibrated for best performance.
 
     def _nudge_rotate(self):
         """Rotate in place toward the more open side to change the viewpoint and
@@ -276,6 +284,7 @@ class Navigator:
         # Turn toward the side with more clearance (fl=ds[0], fr=ds[2]).
         direction = 'left' if (len(ds) >= 4 and ds[0] >= ds[2]) else 'right'
         return robot.turn_by(NUDGE_ROTATE_DEG, direction=direction) != -1
+# REFERENCE: Original code authored by the project team. No external sources or LLMs were used. Values are calibrated for best performance.
 
     def _face_path(self, waypoints):
         """Pivot in place to face the first non-trivial waypoint before driving.
@@ -293,6 +302,7 @@ class Navigator:
             desired = np.arctan2(wy - ry, wx - rx)
             robot.turn_to_heading(desired, tol=FACE_TARGET_ANGLE_TOL_RAD)
             return
+# REFERENCE: Original code authored by the project team. External sources or LLMs were used later to adapt the code for the teams usecase.
 
     # ------------------------------------------------------------------ #
     # Utilities                                                           #
@@ -304,3 +314,5 @@ class Navigator:
         if wps and wps[-1] != path[-1]:
             wps.append(path[-1])
         return wps
+# REFERENCE: 
+# Source: Gemini 3.1 Pro with detailed prompting and adapted to the teams use case.
