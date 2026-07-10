@@ -221,20 +221,6 @@ class Perception:
 # REFERENCE: 
 # Source: Gemini 3.1 Pro with detailed prompting and adapted to the teams use case.
 
-    # ------------------------------------------------------------------ #
-    # Red wall & front distance                                           #
-    # ------------------------------------------------------------------ #
-    def there_is_red_wall(self):
-        """True when red dominates the frame (boundary / arena wall marker)."""
-        hsv = self.get_hsv_image()
-        if hsv is None:
-            return False
-        h, w, _ = hsv.shape
-        m1 = cv2.inRange(hsv, np.array(RED_WALL_HSV_LOWER1), np.array(RED_WALL_HSV_UPPER1))
-        m2 = cv2.inRange(hsv, np.array(RED_WALL_HSV_LOWER2), np.array(RED_WALL_HSV_UPPER2))
-        red = cv2.bitwise_or(m1, m2)
-        return cv2.countNonZero(red) > w * h * COLOR_DETECTION_RED_PIXEL_RATIO
-
     def lidar_front_min_dist(self, half_angle_deg=SAFE_FRONT_CONE_DEG):
         """Minimum lidar range within a front cone; falls back to range sensors."""
         pts = self.robot.get_pointcloud_2d()
@@ -245,6 +231,8 @@ class Perception:
                 return float(np.min(np.linalg.norm(front, axis=1)))
         ds = self.robot.get_distances()
         return float(min(ds[0], ds[2])) if len(ds) >= 3 else float('inf')
+# REFERENCE: 
+# Source: Gemini 3.1 Pro with detailed prompting and adapted to the teams use case.
 
     # ------------------------------------------------------------------ #
     # Depth-camera obstacle layer (flat-on-floor & floating walls)        #

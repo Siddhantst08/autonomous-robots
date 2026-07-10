@@ -85,6 +85,8 @@ class GridMap():
             x, y = points[-1]
             if 0 <= x < MAP_SIZE and 0 <= y < MAP_SIZE:
                 self.log_odds[y, x] += 0.85
+# REFERENCE: 
+# Source: Gemini 3.1 Pro with detailed prompting and adapted to the teams use case.
 
     def update_grid_map(self):
         """Update grid_map from log-odds obstacle_score_map.

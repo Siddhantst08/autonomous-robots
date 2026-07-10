@@ -212,6 +212,19 @@ class Perception:
 # REFERENCE: 
 # Source: Gemini 3.1 Pro with detailed prompting and adapted to the teams use case.
 
+    def lidar_front_min_dist(self, half_angle_deg=SAFE_FRONT_CONE_DEG):
+            """Minimum lidar range within a front cone; falls back to range sensors."""
+            pts = self.robot.get_pointcloud_2d()
+            if pts.shape[0] > 0:
+                ang = np.degrees(np.arctan2(pts[:, 1], pts[:, 0]))
+                front = pts[(ang > -half_angle_deg) & (ang < half_angle_deg)]
+                if front.shape[0] > 0:
+                    return float(np.min(np.linalg.norm(front, axis=1)))
+            ds = self.robot.get_distances()
+            return float(min(ds[0], ds[2])) if len(ds) >= 3 else float('inf')
+# REFERENCE: 
+# Source: Gemini 3.1 Pro with detailed prompting and adapted to the teams use case.
+
     # Depth-camera obstacle layer (flat-on-floor & floating walls)        #
     
     def depth_obstacle_points(self):
