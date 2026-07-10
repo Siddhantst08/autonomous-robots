@@ -143,15 +143,15 @@ A live map visualisation window may open using `pygame`. It shows explored space
 
 ## Results
 
-Replace the rough values below with the final simulation times from your recorded videos.
+Demo video can be seen [here](https://www.youtube.com/playlist?list=PLPnj5xhKrn-I)
 
-| Maze | Start simulation → Blue pillar reached | Blue pillar reached → Yellow pillar reached | Total time | Status |
-| ---- | -------------------------------------- | ------------------------------------------- | ---------- | ------ |
-| Maze 1 | 01:20 | 00:45 | 02:05 | Solved / To verify |
-| Maze 2 | 01:50 | 00:55 | 02:45 | Solved / To verify |
-| Maze 3 | 01:35 | 00:50 | 02:25 | Solved / To verify |
-| Maze 4 | 01:10 | 00:40 | 01:50 | Solved / To verify |
-| Maze 5 | 01:25 | 00:48 | 02:13 | Solved / To verify |
+| Maze | Start simulation → Blue pillar reached | Blue pillar reached → Yellow pillar reached | Total time |
+| ---- | -------------------------------------- | ------------------------------------------- | ---------- |
+| Maze 1 | 01:20 | 00:45 | 02:05 | Not actual
+| Maze 2 | 02:15 | 01:25 | 03:40 | 
+| Maze 3 | 01:40 | 01:46 | 03:26 | 
+| Maze 4 | 01:40 | 00:50 | 02:30 | 
+| Maze 5 | 02:25 | 00:50 | 03:15 | 
 
 ## Main files
 
@@ -182,9 +182,9 @@ Before uploading, check that:
 
 ## Contributors
 
-| Name | Role |
+| Name | Github |
 | ---- | ---- |
-| Team Member 1 | Navigation, mapping, and documentation |
-| Team Member 2 | To be updated |
-| Team Member 3 | To be updated |
-| Team Member 4 | To be updated |
+| Nishith Kumar Alungandula | Navigation, mapping, and documentation |
+| Sathwik Nagasundra Sharma | [SathwikSharma226](https://github.com/SathwikSharma226) |
+| Siddhant Tiwari | [Siddhantst08](https://github.com/Siddhantst08) |
+| Zicheng Cai | To be updated |
