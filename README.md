@@ -157,7 +157,7 @@ Demo video can be seen [here](https://www.youtube.com/playlist?list=PLPnj5xhKrn-
 
 | File | Purpose |
 | ---- | ------- |
-| `main.py` | Starts the controller and mission. |
+| `main_mazeX.py` | Starts the controller and mission. |
 | `setup.py` | Enables motors, sensors, cameras, lidar, and IMU devices. |
 | `my_robot.py` | Handles robot hardware interface, odometry, motion primitives, coordinate conversion, lidar mapping, and DWA local movement. |
 | `perception.py` | Detects pillars, green ground, red walls, lidar obstacles, and depth-camera obstacles. |
