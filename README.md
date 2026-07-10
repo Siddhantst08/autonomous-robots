@@ -11,10 +11,10 @@ The submitted project is organised so that **each maze has its own Webots world 
 For each of the five maze environments, the robot must:
 
 - Start the simulation from the given robot position.
-- Search for and reach the **blue pillar** first.
+- Search for both blue and yellow pillars. Reach the **blue pillar** first.
 - After reaching the blue pillar, navigate to the **yellow pillar**.
 - Avoid driving over the **green ground**.
-- Handle narrow passages, blocked/too-narrow passages, and floating walls.
+- Handle obstacles and floating walls.
 - Run only with the allowed onboard sensors. The Webots Supervisor is not used.
 
 ## Key approaches
@@ -119,7 +119,14 @@ For each world, make sure the robot uses the controller folder inside the same m
 src/controllers/main/
 ```
 
-In Webots, select the robot node and check the `controller` field. Set it to the controller folder name used in your project, for example:
+Replace the 
+```bash
+src/controllers/main 
+```
+folder with our 
+```bash
+src/controllers/main 
+```
 
 ```text
 main
@@ -157,7 +164,7 @@ Demo video can be seen [here](https://www.youtube.com/playlist?list=PLPnj5xhKrn-
 
 | File | Purpose |
 | ---- | ------- |
-| `main_mazeX.py` | Starts the controller and mission. |
+| `main.py` | Starts the controller and mission. |
 | `setup.py` | Enables motors, sensors, cameras, lidar, and IMU devices. |
 | `my_robot.py` | Handles robot hardware interface, odometry, motion primitives, coordinate conversion, lidar mapping, and DWA local movement. |
 | `perception.py` | Detects pillars, green ground, red walls, lidar obstacles, and depth-camera obstacles. |
