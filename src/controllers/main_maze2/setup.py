@@ -1,9 +1,10 @@
 # setup.py
 from CONSTANTS import *
+from controller import Keyboard, Robot, Motor, DistanceSensor, Camera, Accelerometer, Compass, Gyro, InertialUnit, Lidar, PositionSensor, RangeFinder
 
-def setup_robot(robot):
+def setup_robot(robot:Robot):
     # Motors
-    motors = {
+    motors : dict[str,Motor] = {
         'fl': robot.getDevice("fl_wheel_joint"),
         'fr': robot.getDevice("fr_wheel_joint"),
         'rl': robot.getDevice("rl_wheel_joint"),
@@ -13,9 +14,11 @@ def setup_robot(robot):
     for motor in motors.values():
         motor.setPosition(float('inf'))
         motor.setVelocity(0.0)
+        # print(motor.getAcceleration())
+        motor.setAcceleration(80)
 
     # Position sensors
-    sensors = {
+    sensors : dict[str,PositionSensor] = {
         'fl': robot.getDevice("front left wheel motor sensor"),
         'fr': robot.getDevice("front right wheel motor sensor"),
         'rl': robot.getDevice("rear left wheel motor sensor"),
@@ -41,6 +44,7 @@ def setup_robot(robot):
         'accelerometer': robot.getDevice("imu accelerometer"),
         'gyro': robot.getDevice("imu gyro"),
         'compass': robot.getDevice("imu compass"),
+        'inertial_unit':robot.getDevice("imu inertial_unit")
     }
     for i in imu.values():
         i.enable(TIME_STEP)
@@ -56,4 +60,3 @@ def setup_robot(robot):
         sensor.enable(TIME_STEP)
 
     return motors, sensors, imu, camera_rgb, camera_depth, lidar, distance_sensors
-# REFERENCE: Original code authored by the project team. No external sources or LLMs were used. Values are calibrated for best performance.

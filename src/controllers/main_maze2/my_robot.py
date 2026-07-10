@@ -17,9 +17,11 @@ lives in the perception / navigation / mission modules.  Crucially, there are
 command happens on the one thread that also calls ``step()``.
 """
 
+import time
+
 import numpy as np
 
-from controller import Robot
+from controller import Keyboard, Robot, Motor, DistanceSensor, Camera, Accelerometer, Compass, Gyro, InertialUnit, Lidar, PositionSensor, RangeFinder
 
 import utils
 from setup import setup_robot
@@ -68,8 +70,8 @@ class MyRobot(Robot):
 
         # --- Camera intrinsics / green-projection extrinsics ---
         self._init_camera_model()
-# REFERENCE: 
-# Source: Gemini 3.1 Pro with detailed prompting and adapted to the teams use case.
+        self.accOdo = AccOdo()
+        self.motorVelocity = MotorVelocity(self.wheel_sensors)
 
     # ================================================================== #
     # Camera model                                                        #
@@ -104,10 +106,8 @@ class MyRobot(Robot):
             self.cx_d, self.cy_d = self.cx, self.cy
         # Ground-projection extrinsics for green detection (Rosbot geometry).
         self.camera_height_m = CAMERA_HEIGHT_M
-        self.X_offset = 0.03
+        self.X_offset = 0.0
         self.Y_offset = 0.0
-# REFERENCE: 
-# Source: Gemini 3.1 Pro with detailed prompting and adapted to the teams use case.
 
     # ================================================================== #
     # Stepping & odometry                                                 #
@@ -123,7 +123,6 @@ class MyRobot(Robot):
         result = super().step(int(ms))
         self._update_odometry()
         return result
-# REFERENCE: Original code authored by the project team. No external sources or LLMs were used. Values are calibrated for best performance.
 
     def _update_odometry(self):
         """Integrate encoder deltas and refresh heading from the compass.
@@ -168,7 +167,6 @@ class MyRobot(Robot):
         mid = np.arctan2(sn, cs)
         self._odom_x += d * np.cos(mid)
         self._odom_y += d * np.sin(mid)
-# REFERENCE: Original code authored by the project team. No external sources or LLMs were used. Values are calibrated for best performance.
 
     # ================================================================== #
     # Pose & coordinate conversions                                       #
@@ -176,40 +174,32 @@ class MyRobot(Robot):
     def get_heading(self, type='rad'):
         """Return the robot heading in radians (default) or degrees."""
         return self._heading_rad if type == 'rad' else np.degrees(self._heading_rad)
-# REFERENCE: Original code authored by the project team. No external sources or LLMs were used. Values are calibrated for best performance.
 
     def get_position(self):
         """Return the odometry world position as np.array([x, y])."""
         return np.array([self._odom_x, self._odom_y])
-# REFERENCE: Original code authored by the project team. No external sources or LLMs were used. Values are calibrated for best performance.
 
     def get_map_position(self):
         """Return the robot's current grid cell as np.array([mx, my])."""
         mx = self.map_object.map_size // 2 + int(self._odom_x / RESOLUTION)
         my = self.map_object.map_size // 2 - int(np.ceil(self._odom_y / RESOLUTION))
         return np.array([mx, my])
-# REFERENCE: Original code authored by the project team. No external sources or LLMs were used. Values are calibrated for best performance.
 
     def get_map_distance(self, map_target):
         """Return the pixel distance from the robot to a grid cell."""
         return float(np.linalg.norm(self.get_map_position() - np.array(map_target)))
-# REFERENCE: Original code authored by the project team. No external sources or LLMs were used. Values are calibrated for best performance.
 
     def convert_to_map_coordinates(self, x, y):
         """Convert world (x, y) metres to integer grid (mx, my)."""
         mx = self.map_object.map_size // 2 + int(x / RESOLUTION)
         my = self.map_object.map_size // 2 - int(np.ceil(y / RESOLUTION))
         return int(mx), int(my)
-# REFERENCE: 
-# Source: Gemini 3.1 Pro with detailed prompting and adapted to the teams use case.
 
     def convert_to_world_coordinates(self, map_x, map_y):
         """Convert grid (mx, my) to world (x, y) metres at the cell centre."""
         x = (map_x - self.map_object.map_size // 2) * RESOLUTION
         y = (self.map_object.map_size // 2 - map_y) * RESOLUTION
         return float(x), float(y)
-# REFERENCE: 
-# Source: Gemini 3.1 Pro with detailed prompting and adapted to the teams use case.
 
     # ================================================================== #
     # Range sensors & lidar                                               #
@@ -217,7 +207,6 @@ class MyRobot(Robot):
     def get_distances(self):
         """Return the four range-sensor readings [fl, rl, fr, rr] in metres."""
         return [s.getValue() for s in self.distance_sensors]
-# REFERENCE: Original code authored by the project team. No external sources or LLMs were used. Values are calibrated for best performance.
 
     def get_pointcloud_2d(self):
         """Return finite, near lidar points as an (N, 2) array in the robot frame.
@@ -238,7 +227,6 @@ class MyRobot(Robot):
         # ACCURACY GATE: ignore returns farther than the configurable max range.
         rng = np.linalg.norm(arr, axis=1)
         return arr[rng <= LIDAR_MAX_RANGE_M]
-# REFERENCE: Original code authored by the project team. No external sources or LLMs were used. Values are calibrated for best performance.
 
     def transform_points_to_world(self, points_local):
         """Rotate+translate (N, 2) robot-frame points into the world frame."""
@@ -248,13 +236,10 @@ class MyRobot(Robot):
         R = np.array([[np.cos(theta), -np.sin(theta)],
                       [np.sin(theta),  np.cos(theta)]])
         return points_local @ R.T + np.array([self._odom_x, self._odom_y])
-# REFERENCE: 
-# Source: Gemini 3.1 Pro with detailed prompting and adapted to the teams use case.
 
     def get_pointcloud_world_coordinates(self):
         """Return the current lidar scan transformed into world coordinates."""
         return self.transform_points_to_world(self.get_pointcloud_2d())
-# REFERENCE: Original code authored by the project team. No external sources or LLMs were used. Values are calibrated for best performance.
 
     def lidar_update_map(self):
         """Fold the current lidar scan into the occupancy grid."""
@@ -262,12 +247,10 @@ class MyRobot(Robot):
         if world_pts.size == 0:
             return
         self.map_object.lidar_update_grid_map(self.get_map_position(), world_pts)
-# REFERENCE: Original code authored by the project team. No external sources or LLMs were used. Values are calibrated for best performance.
 
     def there_is_obstacle(self, map_target):
         """True if the given grid cell is a lethal (obstacle/green/closed) cell."""
         return self.map_object.there_is_obstacle(map_target)
-# REFERENCE: Original code authored by the project team. No external sources or LLMs were used. Values are calibrated for best performance.
 
     def robot_on_ground(self, max_tan_pitch=0.20):
         """True if the robot is roughly level (safe to trust the lidar map).
@@ -282,7 +265,6 @@ class MyRobot(Robot):
         if any(np.isnan(v) for v in (ax, ay, az)) or abs(az) < 1e-3:
             return True
         return (np.hypot(ax, ay) / abs(az)) < max_tan_pitch
-# REFERENCE: Original code authored by the project team. No external sources or LLMs were used. Values are calibrated for best performance.
 
     # ================================================================== #
     # Motion primitives                                                   #
@@ -291,7 +273,6 @@ class MyRobot(Robot):
         """Set all wheel velocities to zero."""
         for m in self.motors.values():
             m.setVelocity(0.0)
-# REFERENCE: Original code authored by the project team. No external sources or LLMs were used. Values are calibrated for best performance.
 
     def set_robot_velocity(self, left_speed, right_speed):
         """Command left/right wheel-pair velocities and record the turn side."""
@@ -303,45 +284,39 @@ class MyRobot(Robot):
             self.last_turn = 'left'
         elif right_speed < left_speed:
             self.last_turn = 'right'
-# REFERENCE: Original code authored by the project team. No external sources or LLMs were used. Values are calibrated for best performance.
 
     def velocity_to_wheel_speeds(self, v, w):
         """Convert body (v, w) to left/right wheel angular speeds."""
         v_left = v - (self.axle_length / 2.0) * w
         v_right = v + (self.axle_length / 2.0) * w
         return v_left / self.wheel_radius, v_right / self.wheel_radius
-# REFERENCE: Original code authored by the project team. No external sources or LLMs were used. Values are calibrated for best performance.
 
     def is_turning(self):
         """True when the wheel pairs differ enough to indicate rotation."""
         return abs(self.motors['fl'].getVelocity() - self.motors['fr'].getVelocity()) > 0.02
-# REFERENCE: Original code authored by the project team. No external sources or LLMs were used. Values are calibrated for best performance.
 
     def turn_right_milisecond(self, ms=200):
         """Turn in place to the right for the given duration, then stop."""
-        self.set_robot_velocity(4, -4)
+        self.set_robot_velocity(2, -2)
         res = self.step(ms)
         self.stop_motor()
         return res
-# REFERENCE: Original code authored by the project team. No external sources or LLMs were used. Values are calibrated for best performance.
 
     def turn_left_milisecond(self, ms=200):
         """Turn in place to the left for the given duration, then stop."""
-        self.set_robot_velocity(-4, 4)
+        self.set_robot_velocity(-2, 2)
         res = self.step(ms)
         self.stop_motor()
         return res
-# REFERENCE: Original code authored by the project team. No external sources or LLMs were used. Values are calibrated for best performance.
 
     def move_backward_milisecond(self, ms=300):
         """Drive straight backward for the given duration, then stop."""
-        self.set_robot_velocity(-4, -4)
+        self.set_robot_velocity(-2, -2)
         res = self.step(ms)
         self.stop_motor()
         return res
-# REFERENCE: Original code authored by the project team. No external sources or LLMs were used. Values are calibrated for best performance.
 
-    def turn_by(self, degrees, direction='left', speed=8.0):
+    def turn_by(self, degrees, direction='left', speed=2.0):
         """Rotate in place by an angle using drift-free compass feedback.
 
         Preferred over timed turns because it closes the loop on the absolute
@@ -364,7 +339,6 @@ class MyRobot(Robot):
                 break
         self.stop_motor()
         return res
-# REFERENCE: Original code authored by the project team. No external sources or LLMs were used. Values are calibrated for best performance.
 
     def turn_to_heading(self, target_rad, tol=0.12, max_iters=250, speed=6.0):
         """Rotate in place to face an absolute world heading (compass feedback).
@@ -384,7 +358,6 @@ class MyRobot(Robot):
             if self.step() == -1:
                 break
         self.stop_motor()
-# REFERENCE: Original code authored by the project team. No external sources or LLMs were used. Values are calibrated for best performance.
 
     # ================================================================== #
     # DWA local controller                                                #
@@ -429,8 +402,6 @@ class MyRobot(Robot):
                 if score > best_score:
                     best_score, best_v, best_w = score, v, w
         return best_v, best_w
-# REFERENCE: 
-# Source: Gemini 3.1 Pro with detailed prompting and adapted to the teams use case.
 
     def follow_local_target(self, map_target):
         """Take one DWA step toward a grid cell; return (reached, is_stuck).
@@ -450,13 +421,47 @@ class MyRobot(Robot):
         # Navigator._follow_waypoints, so this per-tick step never reports stuck.
         is_stuck = False
 
+        compVal = self.imu["compass"].getValues() 
+        if abs(compVal[2]) > 0.02:
+            print("Tilted!")
+            is_stuck = True
+            return False, is_stuck
+
+        # leftV = (self.motors['fl'].getVelocity() + self.motors['rl'].getVelocity()) * 0.5
+        # rightV = (self.motors['fr'].getVelocity() + self.motors['rr'].getVelocity()) * 0.5
+        actualV = self.motorVelocity.getVelocity()
+        leftV = (actualV[0] + actualV[2]) * 0.5
+        rightV = (actualV[1] + actualV[3]) * 0.5
+        if leftV == 0 and rightV == 0:
+            self.accOdo.velocity = np.array([0.0, 0.0, 0.0])
+        avgV = (leftV + rightV) * 0.5
+
+        accVal = self.imu["accelerometer"].getValues()
+        init = self.imu["inertial_unit"].getRollPitchYaw()
+        self.accOdo.update(accVal,init)
+        if abs(avgV) <= 0.1:
+            self.accOdo.velocity = np.array([0.0, 0.0, 0.0])
+        th = 0.01
+        # print(f"{avgV = }")
+        # print(f"{abs(self.accOdo.velocity[0]) = :.3f} , {abs(avgV)*0.1 - th = :.3f}")
+        if (self.accOdo.velocity[0]) < (avgV)*0.1 - th and (avgV) >= 2:
+        # print(f"{accVal[0] = :.3f}, {avgV = :.3f}")
+            # print(f"{avgV = }")
+            # print(f"{abs(self.accOdo.velocity[0]) = } , {abs(avgV)*0.1 - th = }")
+            print("Stuck!")
+            is_stuck = True
+            return False, is_stuck
+        if (accVal[0]) < -2 and (avgV) > 4:
+            print("Collision!")
+            is_stuck = True
+            return False, is_stuck
+        
+
         wx, wy = self.convert_to_world_coordinates(map_target[0], map_target[1])
         v, w = self.dwa_planner(np.array([wx, wy]))
         left, right = self.velocity_to_wheel_speeds(v, w)
         self.set_robot_velocity(left, right)
         return False, is_stuck
-# REFERENCE: 
-# Source: Gemini 3.1 Pro with detailed prompting and adapted to the teams use case.
 
     # ================================================================== #
     # Map stamping helpers                                                #
@@ -470,7 +475,6 @@ class MyRobot(Robot):
         xs, ys = pts[:, 0], pts[:, 1]
         keep = (xs >= 0) & (xs < w) & (ys >= 0) & (ys < h)
         self.grid_map[ys[keep], xs[keep]] = GREEN_CARPET
-# REFERENCE: Original code authored by the project team. No external sources or LLMs were used. Values are calibrated for best performance.
 
     def mark_closure_block(self):
         """Mark the rectangle just ahead of the robot as CLOSED (blocked)."""
@@ -479,7 +483,6 @@ class MyRobot(Robot):
         except Exception as exc:
             print(f"[robot] mark_closure_block failed: {exc}")
             return False
-# REFERENCE: Original code authored by the project team. No external sources or LLMs were used. Values are calibrated for best performance.
 
     # ================================================================== #
     # Visualisation hand-off (read-only pygame thread)                    #
@@ -491,7 +494,6 @@ class MyRobot(Robot):
                 self.map_object.current_path = path
         except Exception:
             pass
-# REFERENCE: Original code authored by the project team. No external sources or LLMs were used. Values are calibrated for best performance.
 
     def update_vis(self):
         """Publish the current robot cell to the visualiser."""
@@ -501,4 +503,85 @@ class MyRobot(Robot):
                 self.map_object.robot_position = (int(mx), int(my))
         except Exception:
             pass
-# REFERENCE: Original code authored by the project team. No external sources or LLMs were used. Values are calibrated for best performance.
+
+class AccOdo:
+    def __init__(self):
+        self.velocity = np.array([0.0, 0.0, 0.0])
+        self.position = np.array([0.0, 0.0, 0.0])
+        self.last_time = None
+
+    def update(self, accVal:list, rollPitchYaw:list):
+
+        current_time = time.time()
+        
+        # Initialize the timer on the first run
+        if self.last_time is None:
+            self.last_time = current_time
+            return self.velocity, self.position
+        
+        dt = current_time - self.last_time
+        self.last_time = current_time
+
+        # Create numpy arrays for the data
+        accel_x, accel_y, accel_z = accVal
+        accel_raw = np.array([accel_x, accel_y, accel_z])
+
+        # Rotation matrix R: world → body (ZYX order)
+        roll, pitch, yaw = rollPitchYaw
+        cr, sr = np.cos(roll), np.sin(roll)
+        cp, sp = np.cos(pitch), np.sin(pitch)
+        cy, sy = np.cos(yaw), np.sin(yaw)
+        
+        # R = Rz(yaw) * Ry(pitch) * Rx(roll)   → actually the transpose for body-from-world
+        # Full rotation matrix from body to world:
+        R_body_to_world = np.array([
+            [cy*cp,          cy*sp*sr - sy*cr,   cy*sp*cr + sy*sr],
+            [sy*cp,          sy*sp*sr + cy*cr,   sy*sp*cr - cy*sr],
+            [-sp,            cp*sr,               cp*cr]
+        ])
+    
+        # Gravity in world frame (Z up)
+        g = 9.81
+        g_world = np.array([0.0, 0.0, g])
+        
+        # Transform to body frame: g_body = R_body_to_world.T @ g_world
+        grav = R_body_to_world.T @ g_world
+        accel = accel_raw - grav
+
+        # 1. Update Position using current velocity and acceleration
+        self.position += self.velocity * dt + 0.5 * (accel) * (dt ** 2)
+
+        # 2. Update Velocity using acceleration
+        self.velocity += accel * dt
+
+        print = 0
+        # print = 1
+        if print:
+            toPrint = accel_raw
+            print(f"{toPrint[0]:.4f}, {toPrint[1]:.4f}, {toPrint[2]:.4f}")
+            toPrint = grav
+            print(f"{toPrint[0]:.4f}, {toPrint[1]:.4f}, {toPrint[2]:.4f}")
+            toPrint = accel
+            print(f"{toPrint[0]:.4f}, {toPrint[1]:.4f}, {toPrint[2]:.4f}")
+            print(" ")
+
+        return self.velocity, self.position
+    
+class MotorVelocity():
+    def __init__(self,motorSensors:dict[str,PositionSensor]):
+        self.motorSensors = motorSensors
+        self.lastValues = [s.getValue() for s in motorSensors.values()]
+        self.last_time = time.time()
+    
+    def update(self):
+        current_time = time.time()
+        dt = current_time - self.last_time
+        self.last_time = current_time
+        self.currentValues = [s.getValue() for s in self.motorSensors.values()]
+        self.velocity = [(cur - prev)/dt for (cur,prev) in zip(self.currentValues,self.lastValues)]
+        self.lastValues = self.currentValues
+        # print(self.lastValues)
+
+    def getVelocity(self):
+        self.update()
+        return self.velocity

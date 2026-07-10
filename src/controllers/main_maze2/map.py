@@ -1,3 +1,4 @@
+# from my_robot import MyRobot
 import utils
 from CONSTANTS import *
 import numpy as np
@@ -20,7 +21,7 @@ class GridMap():
         self.robot = robot
         self.map_size = MAP_SIZE
         self.resolution = RESOLUTION  # meters per pixel    
-        self.log_odds = np.full((self.map_size, self.map_size), INITIAL_LOG_ODD, dtype=np.float32)
+        self.confidence = np.full((self.map_size, self.map_size), CONFIDENCE_INITIAL, dtype=np.float32)
         self.grid_map = np.full((self.map_size, self.map_size), UNKNOWN, dtype=np.uint8)
         self.frontier_regions = []
         self.visited_frontiers = []
@@ -50,9 +51,9 @@ class GridMap():
             220: (255, 0, 0),     # largest frontier: red
             CLOSED: (128, 0, 128),  # closed area: purple
             FLOATING_WALL: (255, 128, 0),  # floating wall (depth-only): orange
+            SMALL_WALL: (120, 60, 0),  # small wall (depth-only): brown
+            GREEN_CARPET: (0, 200 ,0),  # green
         }
-# REFERENCE: 
-# Source: Gemini 3.1 Pro with detailed prompting. 
 
     def there_is_obstacle(self, map_target):
         """Check if a map target contains an obstacle."""
@@ -60,90 +61,90 @@ class GridMap():
 
         # FLOATING_WALL is included so depth-detected floating/flat walls block
         # planning and DWA just like lidar obstacles, green and closures.
-        if cell == OBSTACLE or cell == GREEN_CARPET or cell == CLOSED or cell == FLOATING_WALL:
+        if cell in [OBSTACLE, GREEN_CARPET, CLOSED , FLOATING_WALL, SMALL_WALL]:
             return True
 
         return False
-# REFERENCE: Original code authored by the project team. No external sources or LLMs were used. Values are calibrated for best performance.
 
-    def update_log_odds(self, robot_pos, lidar_map_points):
-        """Update log-odds map using Bresenham for each LIDAR point in map coordinates.
-        
-        Only updates cells with log_odds < 3. Cells with log_odds >= 3 are locked and remain unchanged.
+    def _protected(self, x, y):
+        cell = self.grid_map[y, x]
+        return cell in [GREEN_CARPET, FLOATING_WALL, SMALL_WALL]
+
+    def update_confidence(self, robot_pos, lidar_map_points):
+        """Update per-cell confidence (0-100) using Bresenham for each LIDAR point.
+
+        Hits increase confidence (+CONFIDENCE_HIT_INC), passes-through decrease
+        it (-CONFIDENCE_MISS_DEC). GREEN_CARPET / FLOATING_WALL cells are never
+        touched.
         """
-            
         for map_target in lidar_map_points:
             points = utils.bresenham_line(robot_pos, map_target)
 
             # Free points: all except the last
             for x, y in points[:-1]:
-                if 0 <= x < MAP_SIZE and 0 <= y < MAP_SIZE:
-                    if self.log_odds[y, x] < 3.5:
-                        self.log_odds[y, x] -= 0.36
+                if 0 <= x < MAP_SIZE and 0 <= y < MAP_SIZE and not self._protected(x, y):
+                    self.confidence[y, x] = max(CONFIDENCE_MIN, self.confidence[y, x] - CONFIDENCE_MISS_DEC)
 
             # Occupied cell: last one
             x, y = points[-1]
-            if 0 <= x < MAP_SIZE and 0 <= y < MAP_SIZE:
-                self.log_odds[y, x] += 0.85
-# REFERENCE: 
-# Source: Gemini 3.1 Pro with detailed prompting and adapted to the teams use case.
+            if 0 <= x < MAP_SIZE and 0 <= y < MAP_SIZE and not self._protected(x, y):
+                self.confidence[y, x] = min(CONFIDENCE_MAX, self.confidence[y, x] + CONFIDENCE_HIT_INC)
+
+    def emergency_clear(self, value = 50):
+        for x in range(MAP_SIZE):
+            for y in range(MAP_SIZE):
+                if self.grid_map[y,x] == UNKNOWN:
+                    continue
+                self.confidence[y,x] = self.confidence[y,x] - value
+                if self.confidence[y,x] > CONFIDENCE_WALL_THRESHOLD:
+                    continue
+                if self.grid_map[y,x] in [OBSTACLE, CLOSED, GREEN_CARPET, FLOATING_WALL, SMALL_WALL]:
+                    self.grid_map[y,x] = UNKNOWN
 
     def update_grid_map(self):
-        """Update grid_map from log-odds obstacle_score_map.
-        
-        Protects special marker cells (CLOSED, GREEN_CARPET, START, END) from being overwritten.
-        Converts log-odds probabilities to discrete map values:
-        - P > 0.7: OBSTACLE (1) = white
-        - P < 0.5: FREESPACE (0) = black
-        - Otherwise: UNKNOWN (255) = gray (unchanged)
+        """Derive grid_map from the confidence grid.
+
+        - confidence > CONFIDENCE_WALL_THRESHOLD -> OBSTACLE (wall)
+        - confidence == CONFIDENCE_INITIAL (untouched) -> UNKNOWN
+        - otherwise -> FREESPACE
+        GREEN_CARPET / FLOATING_WALL cells are never overwritten. CLOSED cells
+        (from mark_blocked_ahead) participate in confidence like normal walls,
+        so they clear back to FREESPACE if repeatedly sensed as free.
         """
-        # Clip the score map from (-5, 5) to avoid overflow when applying exponential function
-        limited_score_map = np.clip(self.log_odds, -5, 5)
-        # Higher score -> Higher P closer to 1
-        P = 1 / (1 + np.exp(-limited_score_map))
-        
-
-       # Build protection masks for cells that should not be overwritten by sensor updates
+        green_mask = (self.grid_map == GREEN_CARPET)
+        floating_mask = (self.grid_map == FLOATING_WALL)
+        small_wall_mask = (self.grid_map == SMALL_WALL)
         closed_mask = (self.grid_map == CLOSED)
-        green_protect_mask = (self.grid_map == GREEN_CARPET)
-        # Floating walls come only from the depth camera; the lidar cannot see
-        # them, so protect them from being cleared by lidar 'free' updates.
-        floating_protect_mask = (self.grid_map == FLOATING_WALL)
+        protected_mask = green_mask | floating_mask | small_wall_mask
 
-        protected_mask = closed_mask | green_protect_mask | floating_protect_mask
+        wall_mask = (self.confidence > CONFIDENCE_WALL_THRESHOLD) & (~protected_mask)
+        unknown_mask = (self.confidence == CONFIDENCE_INITIAL) & (~protected_mask)
+        free_mask = (~wall_mask) & (~unknown_mask) & (~protected_mask)
 
-        # Only update unprotected cells based on probability thresholds
-        unknown_mask = (self.log_odds == INITIAL_LOG_ODD) & (~protected_mask)
-        obstacle_mask = (P > 0.7) & (~protected_mask)
-        free_mask = (P < 0.5) & (~protected_mask)
-
-        # Apply updates
-        self.grid_map[obstacle_mask] = OBSTACLE
+        self.grid_map[wall_mask] = OBSTACLE
         self.grid_map[free_mask] = FREESPACE
         self.grid_map[unknown_mask] = UNKNOWN
+        self.grid_map[closed_mask & wall_mask] = CLOSED  # keep CLOSED tag while still confident
 
-        # Restore protected cells (guarantee persistence)
-        self.grid_map[green_protect_mask] = GREEN_CARPET
-        self.grid_map[closed_mask] = CLOSED
-        self.grid_map[floating_protect_mask] = FLOATING_WALL
-# REFERENCE: Original code authored by the project team. No external sources or LLMs were used. Values are calibrated for best performance.
+        self.grid_map[green_mask] = GREEN_CARPET
+        self.confidence[green_mask] = CONFIDENCE_MAX
+        self.grid_map[floating_mask] = FLOATING_WALL
+        self.confidence[floating_mask] = CONFIDENCE_MAX
+        self.grid_map[small_wall_mask] = SMALL_WALL
+        self.confidence[small_wall_mask] = CONFIDENCE_MAX
 
 
 
     def lidar_update_grid_map(self, robot_pos, lidar_points):
         map_points = self.convert_to_map_coordinate_matrix(lidar_points)
-        self.update_log_odds(robot_pos, map_points)
+        self.update_confidence(robot_pos, map_points)
         self.update_grid_map()
-# REFERENCE: 
-# Source: Gemini 3.1 Pro with detailed prompting. 
 
     def update_map_point(self, map_point, value):
         """Update a single point in grid_map with the specified value."""
         x, y = map_point
         if 0 <= x < self.map_size and 0 <= y < self.map_size:
             self.grid_map[y, x] = value
-# REFERENCE: 
-# Source: Gemini 3.1 Pro with detailed prompting. 
 
     def mark_depth_obstacles(self, ground_cells, floating_cells):
         """Stamp depth-camera obstacles that the horizontal lidar cannot see.
@@ -163,7 +164,7 @@ class GridMap():
         them.  Existing pillar markers are never overwritten.
         """
         H, W = self.grid_map.shape
-        for cells, value in ((ground_cells, OBSTACLE), (floating_cells, FLOATING_WALL)):
+        for cells, value in ((ground_cells, SMALL_WALL), (floating_cells, FLOATING_WALL)):
             if cells is None or len(cells) == 0:
                 continue
             pts = np.asarray(cells, dtype=np.int32).reshape(-1, 2)
@@ -175,10 +176,86 @@ class GridMap():
             # Preserve pillar markers so localisation stays intact.
             not_pillar = ~np.isin(self.grid_map[ys, xs], [BLUE_COLUMN, YELLOW_COLUMN])
             xs, ys = xs[not_pillar], ys[not_pillar]
-            self.log_odds[ys, xs] = 4.0   # lock as occupied (>= 3.5 => never cleared)
+            self.confidence[ys, xs] = CONFIDENCE_MAX
             self.grid_map[ys, xs] = value
-# REFERENCE: 
-# Source: Gemini 3.1 Pro with detailed prompting. 
+
+
+    def clear_sensor_free_space(self):
+        """Denoise false 'normal wall' cells using the 4 range sensors.
+
+        For each sensor reading beyond SENSOR_FREE_THRESHOLD_M (free space),
+        march along that sensor's ray and clear any OBSTACLE cells to
+        FREESPACE. GREEN_CARPET and FLOATING_WALL cells are never touched.
+        """
+        if self.robot is None:
+            return
+        distances = self.robot.get_distances()
+        if len(distances) < 4:
+            return
+        rx, ry = self.robot.get_position()
+        heading = self.robot.get_heading('rad')
+        H, W = self.grid_map.shape
+
+        for dist, ang_deg in zip(distances, SENSOR_LOCAL_ANGLES_DEG):
+            if dist < SENSOR_FREE_THRESHOLD_M:
+                continue
+            ang = heading + np.radians(ang_deg)
+            r = self.resolution
+            while r <= (dist * 0.95):
+                wx = rx + r * np.cos(ang)
+                wy = ry + r * np.sin(ang)
+                mx, my = self.robot.convert_to_map_coordinates(wx, wy)
+                if 0 <= mx < W and 0 <= my < H:
+                    if self.grid_map[my, mx] == OBSTACLE or self.grid_map[my, mx] == CLOSED:
+                        self.grid_map[my, mx] = FREESPACE
+                        self.confidence[my, mx] = CONFIDENCE_INITIAL
+                r += self.resolution
+
+    def mark_blocked_ahead(self, forward_m=0.15, radius_m=0.12, value=CLOSED, hard = False):
+        """Stamp a small BLOCKED disc just in front of the robot.
+
+        Called when the robot is detected as stuck.  Some obstacles -- floating
+        walls and sharp corners -- are missed by the depth camera and never
+        touch the 2D lidar plane, so they are invisible to mapping.  Without a
+        map change the robot would keep replanning the SAME route into the same
+        invisible blockage and stay trapped.  Writing the space ahead into the
+        grid as a hard, persistent obstacle (locked log-odds, protected value)
+        forces A* to route around it on the next plan.
+
+        Returns True if at least one cell was marked.
+        """
+        if self.robot is None:
+            return False
+        rx, ry = self.robot.get_position()
+        heading = self.robot.get_heading('rad')
+        # A point a short distance directly ahead of the robot centre.
+        wx = rx + forward_m * np.cos(heading)
+        wy = ry + forward_m * np.sin(heading)
+        cx, cy = self.robot.convert_to_map_coordinates(wx, wy)
+
+        radius_px = max(1, int(round(radius_m / self.resolution)))
+        H, W = self.grid_map.shape
+        y0, y1 = max(0, cy - radius_px), min(H - 1, cy + radius_px)
+        x0, x1 = max(0, cx - radius_px), min(W - 1, cx + radius_px)
+
+        marked = 0
+        for yy in range(y0, y1 + 1):
+            for xx in range(x0, x1 + 1):
+                if (xx - cx) ** 2 + (yy - cy) ** 2 > radius_px ** 2:
+                    continue
+                # Never overwrite the pillar markers used for localisation.
+                if self.grid_map[yy, xx] in (BLUE_COLUMN, YELLOW_COLUMN):
+                    continue
+                self.confidence[yy, xx] = self.confidence[yy, xx] + CONFIDENCE_HIT_INC * 1
+                if self.grid_map[yy, xx] != FREESPACE:
+                    continue
+                if hard or self.confidence[yy, xx] > CONFIDENCE_WALL_THRESHOLD:
+                    self.grid_map[yy, xx] = value
+                    marked += 1
+                    continue
+        if marked:
+            print(f"[map] stuck -> blocked {marked} cells ahead at ({cx},{cy})")
+        return marked > 0
 
 
     def mark_closure_rect_simple(self, forward_m=0.7, back_m=-0.2, width_m=0.6, value=CLOSED):
@@ -246,8 +323,6 @@ class GridMap():
         except Exception as e:
             print(f'[warning] mark_closure_rect_simple failed: {e}')
             return False
-# REFERENCE: 
-# Source: Gemini 3.1 Pro with detailed prompting. 
 
     def detect_frontiers(self):
         """Detects frontier cells (free space next to unknown space) and groups them into regions using BFS clustering."""
@@ -272,8 +347,6 @@ class GridMap():
         frontier_regions = self._cluster_frontiers_bfs(frontier_cells)
         self.frontier_regions = frontier_regions
         return frontier_regions
-# REFERENCE: 
-# Source: Gemini 3.1 Pro with detailed prompting. 
         
     def _cluster_frontiers_bfs(self, frontier_cells, min_cluster_size=15):
         """Groups frontier cells into regions using Breadth-First Search (BFS) 
@@ -319,8 +392,6 @@ class GridMap():
                     clusters.append(cluster)
 
         return clusters
-# REFERENCE: 
-# Source: Gemini 3.1 Pro with detailed prompting. 
 
 
 
@@ -334,7 +405,7 @@ class GridMap():
             global_map = self.grid_map.copy().astype(np.float32)
             closed_mask = (global_map == CLOSED)
             green_mask  = (global_map == GREEN_CARPET)
-            floating_mask = (global_map == FLOATING_WALL)  # depth-only walls
+            floating_mask = (global_map == FLOATING_WALL) | (global_map == SMALL_WALL)  # depth-only walls
 
             # --- do NOT inflate closures/green: make them free during inflation ---
             temp_map = global_map.copy()
@@ -420,8 +491,6 @@ class GridMap():
 
         # print(f"[info] find_path: no path found between points after inflation attempts; returning None")
         # return None
-# REFERENCE: 
-# Source: Gemini 3.1 Pro with detailed prompting and manually adapted for the teams use case. 
 
 
     def find_path_for_frontier(self, start_point, end_point):
@@ -433,7 +502,7 @@ class GridMap():
         global_map = utils.clean_small_obstacle_components(global_map, obstacle_value=OBSTACLE, min_size=6, connectivity=4)
         closed_mask = (global_map == CLOSED)
         green_mask  = (global_map == GREEN_CARPET)
-        floating_mask = (global_map == FLOATING_WALL)  # depth-only walls
+        floating_mask = (global_map == FLOATING_WALL) | (global_map == SMALL_WALL)  # depth-only walls
 
         # Temporary map: treat closed cells as free to avoid inflation expansion
         temp_map = global_map.copy()
@@ -456,11 +525,9 @@ class GridMap():
         cv2.imwrite("debug_frontier_map.png", global_map*255)
         path = runAStarSearchSpline(global_map, start_point, end_point)
         return path
-# REFERENCE: 
-# Source: Gemini 3.1 Pro with detailed prompting. 
 
 
-    def convert_to_map_coordinate_matrix(self, points_world):
+    def convert_to_map_coordinate_matrix(self, points_world:np.ndarray):
         # Compute transformation from world to map:
         # - Scaling (1 / RESOLUTION)
         # - Translation to shift origin to center of map
@@ -479,8 +546,6 @@ class GridMap():
         points_map = points_scaled + t_map
 
         return points_map.astype(np.int32)
-# REFERENCE: 
-# Source: Gemini 3.1 Pro with detailed prompting. 
 
     # ========== VISUALIZATION METHODS ==========
     
@@ -493,8 +558,6 @@ class GridMap():
         self.clock = pygame.time.Clock()
         # A small, readable font for overlay text
         self.font = pygame.font.SysFont("Arial", 16)
-# REFERENCE: 
-# Source: Gemini 3.1 Pro with detailed prompting. 
     
     def _grid_to_display(self, grid_map):
         """Convert grid map to RGB display image using color_map.
@@ -520,16 +583,12 @@ class GridMap():
         display[~mapped_mask] = (0, 0, 0)
         
         return display
-# REFERENCE: 
-# Source: Gemini 3.1 Pro with detailed prompting. 
     
     def _map_to_screen(self, map_x, map_y):
         """Convert map coordinates to screen coordinates."""
         screen_x = int(map_x * self.window_size[0] / self.map_size)
         screen_y = int(map_y * self.window_size[1] / self.map_size)
         return screen_x, screen_y
-# REFERENCE: 
-# Source: Gemini 3.1 Pro with detailed prompting. 
     
     def _draw_path(self, path, color=(255, 0, 0), thickness=2):
         """Draw a path on screen.
@@ -544,8 +603,6 @@ class GridMap():
         scaled_path = [self._map_to_screen(x, y) for x, y in path]
         for i in range(len(scaled_path) - 1):
             pygame.draw.line(self.pygame_screen, color, scaled_path[i], scaled_path[i + 1], thickness)
-# REFERENCE: 
-# Source: Gemini 3.1 Pro with detailed prompting. 
     
     def _draw_point(self, map_x, map_y, color=(0, 255, 0), radius=5):
         """Draw a single point on screen.
@@ -559,8 +616,6 @@ class GridMap():
             return
         screen_x, screen_y = self._map_to_screen(map_x, map_y)
         pygame.draw.circle(self.pygame_screen, color, (screen_x, screen_y), radius)
-# REFERENCE: 
-# Source: Gemini 3.1 Pro with detailed prompting.     
     
     def _draw_frontier_regions(self, display_map):
         """Draw frontier regions colored by size on the display map.
@@ -593,8 +648,6 @@ class GridMap():
             for x, y in region:
                 if 0 <= x < self.map_size and 0 <= y < self.map_size:
                     display_map[y, x] = color_value
-# REFERENCE: 
-# Source: Gemini 3.1 Pro with detailed prompting. 
     
     def _draw_columns(self):
         """Draw detected column points."""
@@ -608,8 +661,6 @@ class GridMap():
             elif isinstance(col_data, (list, tuple)) and len(col_data) >= 2:
                 x, y = col_data[0], col_data[1]
                 self._draw_point(x, y, color=(0, 255, 255), radius=5)
-# REFERENCE: 
-# Source: Gemini 3.1 Pro with detailed prompting. 
     
     def run_visualization_loop(self):
         """Main visualization loop that continuously displays map state.
@@ -703,8 +754,6 @@ class GridMap():
         
         # Cleanup
         pygame.quit()
-# REFERENCE: 
-# Source: Gemini 3.1 Pro with detailed prompting. 
     
     def start_visualization(self):
         """Start the visualization loop in a separate daemon thread."""
@@ -713,8 +762,6 @@ class GridMap():
             self.visualization_thread = threading.Thread(target=self.run_visualization_loop, daemon=True)
             self.visualization_thread.start()
             print("[info] Visualization thread started")
-# REFERENCE: 
-# Source: Gemini 3.1 Pro with detailed prompting. 
     
     def stop_visualization(self):
         """Stop the visualization loop gracefully."""
@@ -722,6 +769,4 @@ class GridMap():
         if self.visualization_thread and self.visualization_thread.is_alive():
             self.visualization_thread.join(timeout=2.0)
             print("[info] Visualization thread stopped")
-# REFERENCE: 
-# Source: Gemini 3.1 Pro with detailed prompting. 
   
