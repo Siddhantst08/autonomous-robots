@@ -168,18 +168,6 @@ Demo video can be seen [here](https://www.youtube.com/playlist?list=PLPnj5xhKrn-
 | `utils.py` | Contains helper functions for angle wrapping, colour segmentation, obstacle inflation, Bresenham lines, and map saving. |
 | `CONSTANTS.py` | Stores tuning parameters, map values, thresholds, sensor limits, and navigation constants. |
 
-## Notes for submission
-
-Before uploading, check that:
-
-- Each maze folder contains its own `worlds` and `controllers` folders.
-- Each maze has the correct `.wbt` file inside its `worlds` folder.
-- Each maze has a full copy of the controller files inside its controller folder.
-- No `.git`, `.gitignore`, `__pycache__`, `.pyc`, debug cache, or temporary folders are included.
-- The README is included at the root of the submission.
-- The timing table is updated with the final measured simulation times.
-- The video recordings show the simulation time clearly.
-
 ## Contributors
 
 | Name | Github |
