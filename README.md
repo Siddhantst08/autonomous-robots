@@ -184,7 +184,7 @@ Before uploading, check that:
 
 | Name | Github |
 | ---- | ---- |
-| Nishith Kumar Alungandula | Navigation, mapping, and documentation |
+| Nishith Kumar Alungandula | [nishithkumar99](https://github.com/nishithkumar99) |
 | Sathwik Nagasundra Sharma | [SathwikSharma226](https://github.com/SathwikSharma226) |
 | Siddhant Tiwari | [Siddhantst08](https://github.com/Siddhantst08) |
-| Zicheng Cai | To be updated |
+| Zicheng Cai | [ZichengCai](https://git.oth-aw.de/3f3b) |
