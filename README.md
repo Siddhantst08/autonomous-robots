@@ -147,7 +147,7 @@ Demo video can be seen [here](https://www.youtube.com/playlist?list=PLPnj5xhKrn-
 
 | Maze | Start simulation → Blue pillar reached | Blue pillar reached → Yellow pillar reached | Total time |
 | ---- | -------------------------------------- | ------------------------------------------- | ---------- |
-| Maze 1 | 01:20 | 00:45 | 02:05 | Not actual
+| Maze 1 | 03:26 | 01:11 | 04:37 |
 | Maze 2 | 02:15 | 01:25 | 03:40 | 
 | Maze 3 | 01:40 | 01:46 | 03:26 | 
 | Maze 4 | 01:40 | 00:50 | 02:30 | 
