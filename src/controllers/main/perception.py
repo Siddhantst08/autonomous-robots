@@ -45,6 +45,7 @@ class Perception:
         bgra = np.frombuffer(data, np.uint8).reshape((h, w, 4))
         bgr = cv2.cvtColor(bgra, cv2.COLOR_BGRA2BGR)
         return cv2.cvtColor(bgr, cv2.COLOR_BGR2HSV)
+# REFERENCE: Original code authored by the project team. No external sources or LLMs were used. Values are calibrated for best performance.
 
     def get_depth_m(self):
         """Return the depth camera range image in metres (inf where invalid)."""
@@ -56,6 +57,7 @@ class Perception:
             return None
         w, h = cam.getWidth(), cam.getHeight()
         return np.array(data, dtype=np.float32).reshape((h, w))
+# REFERENCE: Original code authored by the project team. No external sources or LLMs were used. Values are calibrated for best performance.
 
     # ------------------------------------------------------------------ #
     # Pillar detection & localisation                                     #
@@ -75,6 +77,7 @@ class Perception:
             if mask is not None and cv2.countNonZero(mask) >= COLUMN_MIN_PIXELS:
                 return color
         return None
+# REFERENCE: Original code authored by the project team. No external sources or LLMs were used. Values are calibrated for best performance.
 
     def localize_column(self, color, hsv=None, depth=None):
         """Estimate the world (x, y) of a coloured pillar from RGB-D.
@@ -120,6 +123,7 @@ class Perception:
         local = np.array([[rng * np.cos(bearing), rng * np.sin(bearing)]])
         world = self.robot.transform_points_to_world(local)[0]
         return np.array([float(world[0]), float(world[1])]), n
+# REFERENCE: Original code authored by the project team. No external sources or LLMs were used. Values are calibrated for best performance.
 
     def column_bearing_error_px(self, color, hsv=None):
         """Horizontal pixel offset of the pillar blob from image centre.
@@ -137,6 +141,7 @@ class Perception:
         if M["m00"] <= 0:
             return None
         return int(M["m10"] / M["m00"]) - mask.shape[1] // 2
+# REFERENCE: Original code authored by the project team. No external sources or LLMs were used. Values are calibrated for best performance.
 
     # ------------------------------------------------------------------ #
     # Green (Poison) hazard                                               #
@@ -164,6 +169,8 @@ class Perception:
         if gd.size == 0:
             return True
         return float(np.min(gd)) < GREEN_STOP_DEPTH_M
+# REFERENCE: 
+# Source: Gemini 3.1 Pro with detailed prompting and adapted to the teams use case.
 
     def green_ground_map_points(self):
         """Project green pixels onto the floor and return their map cells.
@@ -204,6 +211,8 @@ class Perception:
         points = self.robot.map_object.convert_to_map_coordinate_matrix(world)
         points = np.array([p for p in points if self.robot.get_map_distance(p) < DEPTH_OBST_MAX_M * 30])
         return points
+# REFERENCE: 
+# Source: Gemini 3.1 Pro with detailed prompting and adapted to the teams use case.
 
     # ------------------------------------------------------------------ #
     # front distance                                           #
@@ -219,6 +228,8 @@ class Perception:
                 return float(np.min(np.linalg.norm(front, axis=1)))
         ds = self.robot.get_distances()
         return float(min(ds[0], ds[2])) if len(ds) >= 3 else float('inf')
+# REFERENCE: 
+# Source: Gemini 3.1 Pro with detailed prompting and adapted to the teams use case.
 
     # ------------------------------------------------------------------ #
     # Depth-camera obstacle layer (flat-on-floor & floating walls)        #
@@ -302,6 +313,7 @@ class Perception:
         floating_cells = np.stack([u_mx[floating], u_my[floating]], axis=1)
         # print("normal ground_cells floating_cells")
         return ground_cells, floating_cells
+# REFERENCE: Original code authored by the project team. External sources or LLMs were used later to adapt the code for the teams usecase.
 
     def depth_front_min_dist(self):
         """Nearest forward distance (m) to a collision-height obstacle in the
@@ -321,3 +333,4 @@ class Perception:
         band = (np.isfinite(Z) & (Z > DEPTH_OBST_MIN_M) & (Z < DEPTH_OBST_MAX_M)
                 & (z_r > DEPTH_COLLISION_Z_MIN) & (z_r < DEPTH_COLLISION_Z_MAX))
         return float(np.min(Z[band])) if np.any(band) else float('inf')
+# REFERENCE: Original code authored by the project team. Rxternal sources or LLMs were used later to adapt the code for the teams usecase.
